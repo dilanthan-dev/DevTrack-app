@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DevTrack | My projects</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main>
+      <div class="page-head">
+        <div><h1 id="company">My projects</h1><div class="muted">Client portal: read-only view of your projects, their progress and your invoices.</div></div>
+      </div>
+      <div id="msg"></div>
+      <div class="grid kpis" id="projects"></div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="page-head" style="margin-bottom:10px"><h2 style="margin:0">Tasks</h2>
+          <select id="filter" style="width:200px"><option value="">All statuses</option><option>To Do</option><option>In Progress</option><option>In Review</option><option>Done</option></select></div>
+        <div class="table-wrap" id="tasks"></div>
+      </div>
+      <div class="card"><h2>Invoices</h2><div class="table-wrap" id="invoices"></div></div>
+    </main>
+  </div>
+  <script src="/js/common.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let data;
+    const drawTasks = () => {
+      const f = $('filter').value;
+      renderTable($('tasks'), data.tasks.filter((t) => !f || t.status === f));
+    };
+    initLayout().then(async () => {
+      data = await api('/api/portal');
+      $('company').textContent = data.client.company_name;
+      $('projects').innerHTML = data.projects.length ? data.projects.map((p) => {
+        const pct = p.tasks ? Math.round((p.tasks_done / p.tasks) * 100) : 0;
+        return `<div class="card"><div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(p.name)}</b>${cell('status', p.status).replace(/<\/?td[^>]*>/g, '')}</div>
+          <div class="muted small" style="margin:6px 0 10px">${esc(p.start_date)} → ${esc(p.due_date)}</div>
+          <div class="progress"><span style="width:${pct}%"></span></div>
+          <div class="muted small" style="margin-top:6px">${p.tasks_done}/${p.tasks} tasks done · ${p.hours_logged} hours logged</div></div>`;
+      }).join('') : '<div class="card muted">No projects yet.</div>';
+      drawTasks();
+      $('filter').onchange = drawTasks;
+      renderTable($('invoices'), data.invoices);
+    }).catch((e) => showError($('msg'), e));
+  </script>
+</body>
+</html>

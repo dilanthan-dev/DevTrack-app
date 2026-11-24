@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DevTrack | Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/vendor/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main>
+      <div class="page-head">
+        <div><h1>Dashboard</h1><div class="muted" id="hello"></div></div>
+        <button class="btn-dark" id="refresh">Refresh</button>
+      </div>
+      <div id="msg"></div>
+      <div class="grid kpis" id="kpis"></div>
+      <div class="grid charts">
+        <div class="card"><h2>Hours logged per month</h2><div class="chart-box"><canvas id="c-monthly"></canvas></div></div>
+        <div class="card"><h2>Tasks by status</h2><div class="chart-box"><canvas id="c-status"></canvas></div></div>
+        <div class="card" id="dev-card"><h2>Total hours per developer</h2><div class="chart-box"><canvas id="c-devs"></canvas></div></div>
+        <div class="card" id="fin-card"><h2>Budget vs. labour cost vs. invoiced</h2><div class="chart-box"><canvas id="c-fin"></canvas></div></div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h2>Most overdue tasks</h2>
+        <div class="table-wrap" id="overdue"></div>
+      </div>
+    </main>
+  </div>
+  <script src="/js/common.js"></script>
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>

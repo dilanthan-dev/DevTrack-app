@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DevTrack | Reports</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main>
+      <div class="page-head">
+        <div><h1>Reports</h1><div class="muted">The 10 database views from Phase II, run live against MySQL.</div></div>
+      </div>
+      <div id="msg"></div>
+      <div class="views-layout">
+        <div class="view-list" id="list"></div>
+        <div class="card">
+          <div class="page-head" style="margin-bottom:10px">
+            <div>
+              <h2 id="title" style="margin-bottom:2px">Choose a view</h2>
+              <div class="muted small" id="desc"></div>
+            </div>
+            <div class="toolbar" style="margin:0">
+              <input id="filter" placeholder="Filter these rows..." style="width:200px">
+              <a class="btn" id="csv">Export CSV</a>
+              <a class="btn" id="pdf">Export PDF</a>
+            </div>
+          </div>
+          <div class="table-wrap" id="table"><div class="empty">Pick a view on the left.</div></div>
+          <div class="muted small" id="count" style="margin-top:8px"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="/js/common.js"></script>
+  <script>
+    let current = null, rows = [], sort = null, dir = 'asc';
+
+    function draw() {
+      const q = document.getElementById('filter').value.trim().toLowerCase();
+      let shown = q ? rows.filter((r) => Object.values(r).some((v) => String(v ?? '').toLowerCase().includes(q))) : rows.slice();
+      if (sort) shown.sort((a, b) => {
+        const x = a[sort], y = b[sort];
+        const c = typeof x === 'number' && typeof y === 'number' ? x - y : String(x ?? '').localeCompare(String(y ?? ''));
+        return dir === 'desc' ? -c : c;
+      });
+      renderTable(document.getElementById('table'), shown, {
+        sort, dir, onSort: (c) => { dir = sort === c && dir === 'asc' ? 'desc' : 'asc'; sort = c; draw(); },
+      });
+      document.getElementById('count').textContent = `${shown.length} of ${rows.length} row(s)`;
+    }
+
+    async function open(v) {
+      current = v; sort = null;
+      document.querySelectorAll('.view-item').forEach((b) => b.classList.toggle('active', b.dataset.key === v.key));
+      document.getElementById('title').textContent = v.title;
+      document.getElementById('desc').textContent = `${v.type}. ${v.desc}`;
+      document.getElementById('csv').href = `/api/export/view/${v.key}.csv`;
+      document.getElementById('pdf').href = `/api/export/view/${v.key}.pdf`;
+      document.getElementById('table').innerHTML = '<div class="empty">Loading...</div>';
+      history.replaceState(null, '', '#' + v.key);
+      try {
+        rows = (await api('/api/views/' + v.key)).rows;
+        draw();
+      } catch (err) { showError(document.getElementById('table'), err); }
+    }
+
+    initLayout().then(async () => {
+      const views = await api('/api/views');
+      const list = document.getElementById('list');
+      list.innerHTML = views.map((v, i) => `<button class="view-item" data-key="${v.key}">
+        <div class="t">${i + 1}. ${esc(v.title)}</div><div class="k">${esc(v.type)}</div></button>`).join('');
+      list.querySelectorAll('.view-item').forEach((b) => b.onclick = () => open(views.find((v) => v.key === b.dataset.key)));
+      document.getElementById('filter').oninput = debounce(draw, 150);
+      open(views.find((v) => '#' + v.key === location.hash) || views[0]);
+    }).catch((e) => showError(document.getElementById('msg'), e));
+  </script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DevTrack | Log in</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="login-page">
+    <section class="login-art">
+      <div class="brand"><span class="brand-mark">D</span>DevTrack</div>
+      <div>
+        <h1>Every client, deadline and commit in one place.</h1>
+        <p>DevTrack is the project tracker for a small web agency: clients, projects, tasks, logged hours, invoices and GitHub activity, all from one MySQL database.</p>
+      </div>
+      <p class="small muted">SOFE 3700U Data Management Systems, Group 10</p>
+    </section>
+    <section class="login-form">
+      <button class="theme-btn login-theme" id="login-theme-toggle" type="button"></button>
+      <form class="card" id="form" novalidate>
+        <h1>Log in</h1>
+        <p class="muted">Use your DevTrack username or email.</p>
+        <div id="msg"></div>
+        <div class="field" id="f-username">
+          <label for="username">Username or email</label>
+          <input id="username" autocomplete="username" required>
+          <div class="err"></div>
+        </div>
+        <div class="field" id="f-password">
+          <label for="password">Password</label>
+          <input id="password" type="password" autocomplete="current-password" required>
+          <div class="err"></div>
+        </div>
+        <button class="btn-primary" style="width:100%;justify-content:center" id="submit">Log in</button>
+        <div class="demo">
+          Demo accounts, click one to fill in the form:<br>
+          <button type="button" class="btn-sm" data-u="emily.admin" data-p="admin123">Admin</button>
+          <button type="button" class="btn-sm" data-u="priya" data-p="user123">Developer (user)</button>
+          <button type="button" class="btn-sm" data-u="sarah.mlb" data-p="guest123">Client (guest)</button>
+        </div>
+      </form>
+    </section>
+  </div>
+  <script src="/js/common.js"></script>
+  <script>
+    const loginTheme = document.getElementById('login-theme-toggle');
+    loginTheme.innerHTML = themeButtonLabel();
+    loginTheme.onclick = () => { setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); loginTheme.innerHTML = themeButtonLabel(); };
+    const form = document.getElementById('form');
+    const setErr = (id, msg) => {
+      const f = document.getElementById('f-' + id);
+      f.classList.toggle('invalid', !!msg);
+      f.querySelector('.err').textContent = msg || '';
+    };
+    document.querySelectorAll('[data-u]').forEach((b) => b.onclick = () => {
+      document.getElementById('username').value = b.dataset.u;
+      document.getElementById('password').value = b.dataset.p;
+      setErr('username'); setErr('password');
+    });
+    // If already logged in, skip the login page.
+    fetch('/api/auth/me').then((r) => r.ok && r.json()).then((d) => { if (d && d.user) location.href = '/'; });
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      setErr('username', username ? '' : 'Enter your username or email.');
+      setErr('password', password ? '' : 'Enter your password.');
+      if (!username || !password) return;
+      const btn = document.getElementById('submit');
+      btn.disabled = true; btn.textContent = 'Logging in...';
+      try {
+        const { user } = await api('/api/auth/login', { method: 'POST', body: { username, password } });
+        location.href = user.role === 'guest' ? '/portal.html' : '/dashboard.html';
+      } catch (err) {
+        document.getElementById('msg').innerHTML = `<div class="banner error">${esc(err.message)}</div>`;
+        btn.disabled = false; btn.textContent = 'Log in';
+      }
+    };
+  </script>
+</body>
+</html>

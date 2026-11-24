@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DevTrack | Manage data</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main>
+      <div class="page-head">
+        <div><h1 id="heading">Manage data</h1><div class="muted">Create, view, edit and delete records. Changes save without reloading the page.</div></div>
+        <button class="btn-primary" id="add">+ Add</button>
+      </div>
+      <div class="tabs" id="tabs"></div>
+      <div id="msg"></div>
+      <div class="card">
+        <div class="toolbar" id="toolbar"></div>
+        <div class="table-wrap" id="table"></div>
+        <div class="toolbar" style="margin:10px 0 0;justify-content:space-between">
+          <span class="muted small" id="count"></span>
+          <span><button class="btn-sm" id="prev">‹ Prev</button> <button class="btn-sm" id="next">Next ›</button></span>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-bg" id="modal">
+    <form class="modal" id="form" novalidate>
+      <div class="modal-head"><h2 id="form-title" style="margin:0"></h2><button type="button" class="x" id="close">×</button></div>
+      <div id="form-msg"></div>
+      <div class="form-grid" id="fields"></div>
+      <div class="modal-foot">
+        <button type="button" id="cancel">Cancel</button>
+        <button class="btn-primary" id="save">Save</button>
+      </div>
+    </form>
+  </div>
+  <datalist id="dl-city"></datalist>
+  <datalist id="dl-note"></datalist>
+
+  <script src="/js/common.js"></script>
+  <script src="/js/manage.js"></script>
+</body>
+</html>

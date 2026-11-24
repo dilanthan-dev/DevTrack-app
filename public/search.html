@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DevTrack | Task search</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main>
+      <div class="page-head">
+        <div><h1>Task search</h1><div class="muted">Results update as you type. Every filter runs as a MySQL query on the server.</div></div>
+      </div>
+      <div id="msg"></div>
+      <div class="card">
+        <div class="toolbar">
+          <div class="grow"><label>Keyword or task ID</label><input id="q" placeholder="e.g. map, booking, 14"></div>
+          <div><label>Status</label><select id="status"><option value="">Any</option><option>To Do</option><option>In Progress</option><option>In Review</option><option>Done</option></select></div>
+          <div><label>Priority</label><select id="priority"><option value="">Any</option><option>Critical</option><option>High</option><option>Medium</option><option>Low</option></select></div>
+          <div><label>Project</label><select id="project_id"><option value="">Any</option></select></div>
+          <div><label>Assigned to</label><select id="assigned_to"><option value="">Anyone</option><option value="null">Unassigned</option></select></div>
+          <div><label>Due from</label><input type="date" id="from"></div>
+          <div><label>Due to</label><input type="date" id="to"></div>
+        </div>
+        <div class="toolbar">
+          <span class="muted small" style="align-self:center">Quick filters:</span>
+          <button class="btn-sm" data-quick="overdue">Overdue</button>
+          <button class="btn-sm" data-quick="week">Due in next 7 days</button>
+          <button class="btn-sm" data-quick="unassigned">Unassigned</button>
+          <button class="btn-sm" data-quick="mine" id="mine-btn">My tasks</button>
+          <button class="btn-sm" data-quick="clear">Clear</button>
+          <span style="flex:1"></span>
+          <a class="btn btn-sm" id="csv">Export CSV</a><a class="btn btn-sm" id="pdf">Export PDF</a>
+        </div>
+        <div class="table-wrap" id="table"></div>
+        <div class="muted small" id="count" style="margin-top:8px"></div>
+      </div>
+    </main>
+  </div>
+  <script src="/js/common.js"></script>
+  <script>
+    const ids = ['q', 'status', 'priority', 'project_id', 'assigned_to', 'from', 'to'];
+    const $ = (id) => document.getElementById(id);
+    let sort = 'due_date', dir = 'asc', overdueOnly = false, USER;
+
+    function params() {
+      const p = new URLSearchParams();
+      ids.forEach((id) => { const v = $(id).value.trim(); if (v) p.set(id, v); });
+      p.set('sort', sort); p.set('dir', dir);
+      return p;
+    }
+
+    async function run() {
+      const p = params();
+      $('csv').href = '/api/export/data/tasks.csv?' + p;
+      $('pdf').href = '/api/export/data/tasks.pdf?' + p;
+      p.set('limit', 500);
+      try {
+        let { rows, total } = await api('/api/tasks?' + p);
+        const today = new Date().toISOString().slice(0, 10);
+        if (overdueOnly) rows = rows.filter((r) => r.status !== 'Done' && r.due_date < today);
+        renderTable($('table'), rows, {
+          columns: ['task_id', 'title', 'project', 'developer', 'priority', 'status', 'estimated_hours', 'due_date'],
+          sort, dir, onSort: (c) => { dir = sort === c && dir === 'asc' ? 'desc' : 'asc'; sort = c; run(); },
+        });
+        $('count').textContent = `${rows.length} task(s) found${overdueOnly ? ' (overdue only)' : ` of ${total}`}`;
+      } catch (err) { showError($('table'), err); }
+    }
+
+    function quick(kind) {
+      const today = new Date();
+      const iso = (d) => d.toISOString().slice(0, 10);
+      ids.forEach((id) => { $(id).value = ''; });
+      overdueOnly = false;
+      if (kind === 'overdue') { $('to').value = iso(new Date(today - 864e5)); overdueOnly = true; }
+      if (kind === 'week') { $('from').value = iso(today); $('to').value = iso(new Date(+today + 7 * 864e5)); }
+      if (kind === 'unassigned') $('assigned_to').value = 'null';
+      if (kind === 'mine' && USER.developer_id) $('assigned_to').value = USER.developer_id;
+      document.querySelectorAll('[data-quick]').forEach((button) => {
+        const active = kind !== 'clear' && button.dataset.quick === kind;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+      });
+      run();
+    }
+
+    initLayout().then(async (meta) => {
+      USER = meta.user;
+      if (!USER.developer_id) $('mine-btn').style.display = 'none';
+      const [projects, devs] = await Promise.all([api('/api/lookup/projects'), api('/api/lookup/developers')]);
+      $('project_id').innerHTML += projects.map((o) => `<option value="${o.id}">${esc(o.label)}</option>`).join('');
+      $('assigned_to').innerHTML += devs.map((o) => `<option value="${o.id}">${esc(o.label)}</option>`).join('');
+      const go = debounce(() => {
+        overdueOnly = false;
+        document.querySelectorAll('[data-quick]').forEach((button) => {
+          button.classList.remove('active');
+          button.setAttribute('aria-pressed', 'false');
+        });
+        run();
+      }, 250);
+      ids.forEach((id) => { $(id).addEventListener(id === 'q' ? 'input' : 'change', go); });
+      document.querySelectorAll('[data-quick]').forEach((b) => { b.onclick = () => quick(b.dataset.quick); });
+      run();
+    }).catch((e) => showError($('msg'), e));
+  </script>
+</body>
+</html>

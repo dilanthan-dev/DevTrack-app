@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DevTrack | GitHub</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main>
+      <div class="page-head">
+        <div><h1>GitHub integration</h1><div class="muted">Fetch a repository and its latest commits from the GitHub REST API and save them into the database.</div></div>
+      </div>
+      <div id="msg"></div>
+      <div class="grid" style="grid-template-columns:minmax(300px,420px) 1fr;align-items:start">
+        <form class="card" id="form" novalidate>
+          <h2>Sync a repository</h2>
+          <div class="field" data-field="owner"><label for="owner">Owner (user or organization) <span class="req">*</span></label><input id="owner" placeholder="e.g. expressjs" value="expressjs"><div class="err"></div></div>
+          <div class="field" data-field="repo"><label for="repo">Repository <span class="req">*</span></label><input id="repo" placeholder="e.g. express" value="express"><div class="err"></div></div>
+          <div class="field"><label for="project_id">Link to project</label><select id="project_id"><option value="">(internal / none)</option></select></div>
+          <div class="field"><label for="limit">Commits to fetch</label><select id="limit"><option>10</option><option selected>30</option><option>50</option><option>100</option></select></div>
+          <div style="display:flex;gap:8px">
+            <button type="button" id="preview">Preview</button>
+            <button class="btn-primary" id="sync">Fetch and save</button>
+          </div>
+          <p class="muted small" id="admin-note"></p>
+          <div id="preview-box"></div>
+        </form>
+        <div class="card">
+          <h2>Repositories in the database</h2>
+          <div class="table-wrap" id="repos" style="max-height:260px"></div>
+          <h2 style="margin-top:18px" id="commits-title">Commits</h2>
+          <div class="table-wrap" id="commits"><div class="empty">Click a repository to see its saved commits.</div></div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="/js/common.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const NAME_RE = /^[A-Za-z0-9._-]{1,100}$/;
+
+    function check() {
+      let ok = true;
+      for (const id of ['owner', 'repo']) {
+        const v = $(id).value.trim();
+        const msg = !v ? 'Required.' : NAME_RE.test(v) ? '' : 'Letters, numbers, dots, dashes and underscores only.';
+        const box = document.querySelector(`[data-field="${id}"]`);
+        box.classList.toggle('invalid', !!msg); box.querySelector('.err').textContent = msg;
+        if (msg) ok = false;
+      }
+      return ok;
+    }
+
+    async function loadRepos() {
+      try {
+        const repos = await api('/api/github/repos');
+        renderTable($('repos'), repos, { columns: ['github_owner', 'repo_name', 'project', 'commits', 'last_synced'], actions: (r) => `<button class="btn-sm" data-repo="${r.repo_id}" data-name="${esc(r.github_owner + '/' + r.repo_name)}">Commits</button>` });
+        $('repos').querySelectorAll('[data-repo]').forEach((b) => { b.onclick = () => loadCommits(b.dataset.repo, b.dataset.name); });
+      } catch (err) { showError($('repos'), err); }
+    }
+
+    async function loadCommits(id, name) {
+      $('commits-title').textContent = `Commits in ${name}`;
+      try { renderTable($('commits'), await api('/api/github/commits?repo_id=' + id)); }
+      catch (err) { showError($('commits'), err); }
+    }
+
+    $('preview').onclick = async () => {
+      if (!check()) return;
+      $('preview-box').innerHTML = '<p class="muted">Asking GitHub...</p>';
+      try {
+        const r = await api(`/api/github/preview?owner=${encodeURIComponent($('owner').value.trim())}&repo=${encodeURIComponent($('repo').value.trim())}`);
+        $('preview-box').innerHTML = `<div class="banner info"><b><a href="${esc(r.html_url)}" target="_blank" rel="noopener">${esc(r.full_name)}</a></b><br>
+          ${esc(r.description || 'No description')}<br><span class="small">★ ${r.stars} · ${r.forks} forks · ${r.open_issues} open issues · ${esc(r.language || 'n/a')} · branch ${esc(r.default_branch)}</span></div>`;
+      } catch (err) { $('preview-box').innerHTML = `<div class="banner error">${esc(err.message)}</div>`; }
+    };
+
+    $('form').onsubmit = async (e) => {
+      e.preventDefault();
+      if (!check()) return;
+      const btn = $('sync'); btn.disabled = true; btn.textContent = 'Fetching...';
+      try {
+        const r = await api('/api/github/sync', { method: 'POST', body: { owner: $('owner').value.trim(), repo: $('repo').value.trim(), project_id: $('project_id').value || null, limit: $('limit').value } });
+        toast(r.message, 'success');
+        await loadRepos();
+        loadCommits(r.repo_id, r.repo);
+      } catch (err) {
+        toast(err.message, 'error');
+        for (const [k, m] of Object.entries(err.details || {})) { const b = document.querySelector(`[data-field="${k}"]`); if (b) { b.classList.add('invalid'); b.querySelector('.err').textContent = m; } }
+      } finally { btn.disabled = false; btn.textContent = 'Fetch and save'; }
+    };
+
+    initLayout().then(async (meta) => {
+      if (meta.user.role !== 'admin') { $('sync').disabled = true; $('admin-note').textContent = 'Only an admin can save repositories. You can still preview and browse.'; }
+      const projects = await api('/api/lookup/projects');
+      $('project_id').innerHTML += projects.map((o) => `<option value="${o.id}">${esc(o.label)}</option>`).join('');
+      loadRepos();
+    }).catch((e) => showError($('msg'), e));
+  </script>
+</body>
+</html>

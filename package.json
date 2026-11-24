@@ -1,0 +1,20 @@
+{
+  "name": "devtrack",
+  "version": "1.0.0",
+  "description": "DevTrack: client and project management web app for web agencies (SOFE 3700U Phase III)",
+  "main": "server.js",
+  "scripts": {
+    "setup": "node scripts/setup.js",
+    "start": "node server.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "chart.js": "^4.6.1",
+    "dotenv": "^18.0.10",
+    "express": "^4.22.3",
+    "express-session": "^1.19.0",
+    "mysql2": "^3.24.6",
+    "pdfkit": "^0.21.0"
+  }
+}
