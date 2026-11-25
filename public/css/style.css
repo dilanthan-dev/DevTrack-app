@@ -80,7 +80,7 @@ h2 { font-size: 17px; line-height: 1.3; font-weight: 700; margin: 0 0 14px; }
 .app { display: grid; grid-template-columns: 236px minmax(0, 1fr); min-height: 100vh; }
 .sidebar { background: var(--sidebar); border-right: 1px solid var(--line); padding: 22px 14px 18px; display: flex; flex-direction: column; gap: 4px; position: sticky; top: 0; height: 100vh; }
 .brand { display: flex; align-items: center; gap: 10px; color: var(--text); font-weight: 800; font-size: 20px; letter-spacing: -.02em; padding: 0 10px 26px; }
-.brand-mark { width: 32px; height: 32px; border-radius: 9px; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-size: 17px; font-weight: 800; }
+.brand-mark { width: 32px; height: 32px; border-radius: 9px; object-fit: contain; display: block}
 .nav { display: grid; gap: 2px; }
 .nav a { display: block; padding: 10px 12px; border-radius: var(--radius-sm); color: var(--muted); text-decoration: none; font-size: 15px; font-weight: 600; border-left: 3px solid transparent; }
 .nav a:hover { color: var(--text); background: var(--card-hover); }

@@ -67,7 +67,7 @@ async function initLayout() {
   const here = location.pathname;
   const side = document.getElementById('sidebar');
   side.innerHTML = `
-    <div class="brand"><span class="brand-mark">D</span>DevTrack</div>
+    <div class="brand"><img class="brand-mark" src="/favicon.png" alt="DevTrack logo">DevTrack</div>
     <nav class="nav">${NAV.filter((n) => n.roles.includes(u.role)).map((n) =>
       `<a href="${n.href}" class="${here === n.href ? 'active' : ''}"${here === n.href ? ' aria-current="page"' : ''}>${n.label}</a>`).join('')}</nav>
     <div class="spacer"></div>
